@@ -1,5 +1,3 @@
-require 'json'
-
 Puppet::Type.type(:cacti_host).provide(:api) do
   desc "Use the wrapperscript apihelper.php which directly talks
     to the cacti API that is also written in PHP.
