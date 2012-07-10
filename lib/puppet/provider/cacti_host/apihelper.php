@@ -30,9 +30,12 @@
 # The best way to check whether the script can find the cacti api is by
 # running
 #
-#     ./apihelper.php instances
+#     % ./apihelper.php instances /tmp/apitest.txt
+#     % json_pp < /tmp/apitest
 #
-# on the commandline. You should see a dump of your cacti hosts as JSON.
+# json_pp is used to pretty-print the file and is part of perl-core/JSON-PP.
+# You can also use cat. The file /tmp/apitest.txt should show a list of all
+# hosts with the corresponding puppet properties.
 
 # You may have to edit these to match your cacti installation
 include('/var/www/localhost/htdocs/cacti/include/global.php');
@@ -107,8 +110,18 @@ array_shift($parms);
 if (sizeof($parms)) {
   switch($parms[0]) {
   case 'instances':
-    echo json_encode(instances());
-#    echo yaml_emit(instances());
+    if(isset($parms[1])) {
+      $filename = $parms[1];
+      $fh = fopen($filename, 'w') or die("Can't open file $filename");
+      fwrite($fh, json_encode(instances())) or die("Can't write to file $filename");
+      fclose($fh);
+      echo "API: Instances written to $filename\n";
+    }
+    else {
+      echo "You have to pass a filename as a second parameter\n";
+      echo "Usage: ".__FILE__." instances <filename>\n";
+      exit(1);
+    }
     break;
   default:
     echo "ERROR: Ivalid argument ".$parms[0]."\n";

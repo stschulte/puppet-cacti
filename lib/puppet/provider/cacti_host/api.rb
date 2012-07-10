@@ -1,3 +1,5 @@
+require 'tempfile'
+
 Puppet::Type.type(:cacti_host).provide(:api) do
   desc "Use the wrapperscript apihelper.php which directly talks
     to the cacti API that is also written in PHP.
@@ -15,8 +17,16 @@ Puppet::Type.type(:cacti_host).provide(:api) do
 
   def self.instances
     resources = []
+    hosts = {}
 
-    hosts = PSON.parse(apihelper('instances'))
+    output = Tempfile.new('puppet_cactiapihelper')
+    begin
+      apihelper :instances, output.path
+      hosts = PSON.parse(output.read)
+    ensure
+      output.close!
+    end
+
     hosts.each_pair do |description, hash|
       resource = {:name => description, :ensure => :present}
       hash.each_pair do |key, value|
