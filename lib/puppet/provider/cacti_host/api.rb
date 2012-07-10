@@ -49,4 +49,34 @@ Puppet::Type.type(:cacti_host).provide(:api) do
     get(:ensure) != :absent
   end
 
+  def create
+    # Take all the property values from the resource and
+    # store them in property_hash so the flush method can
+    # see them
+    @resource.class.validproperties.each do |property|
+      if value = @resource.should(property)
+        @property_hash[property] = value
+      end
+    end
+  end
+
+  def destroy
+    @property_hash[:ensure] = :absent
+  end
+
+  def flush
+    if @property_hash[:ensure] == :absent
+      apihelper :destroy, @resource[:name]
+    else
+      output = Tempfile.new('puppet_cactiapihelper')
+      begin
+        output.write PSON.generate(@property_hash)
+        output.close
+        apihelper :save, @resource[:name], output.path
+      ensure
+        output.close!
+      end
+    end
+  end
+
 end

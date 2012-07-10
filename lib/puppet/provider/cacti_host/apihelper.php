@@ -38,8 +38,9 @@
 # hosts with the corresponding puppet properties.
 
 # You may have to edit these to match your cacti installation
-include('/var/www/localhost/htdocs/cacti/include/global.php');
-include_once($config["base_path"]."/lib/api_automation_tools.php");
+require('/var/www/localhost/htdocs/cacti/include/global.php');
+require_once($config["base_path"]."/lib/api_automation_tools.php");
+require_once($config["base_path"]."/lib/api_device.php");
 
 # The API method getHosts() will return an array of hashes for all hosts. The
 # HOST_FIELDS array describes the fields we are interested in. Most fields can
@@ -104,6 +105,71 @@ function instances(){
   return $result;
 }
 
+function save($host, $attributes) {
+  # We first need the id of our host if the host is already present.
+  # Unfortunately the API does not have a nice function for that already
+  # so we cheat a little bit here
+  $id = db_fetch_cell("select id from host where description = '$host' LIMIT 1");
+  if (empty($id)) {
+    echo "Host $host is currently absent\n";
+  }
+  else {
+    echo "Host $host is currently present and will be updated (id=$id)\n";
+  }
+
+  # The hosttemplate is passed by puppet as a string but we need the corresponding id
+  $template_id;
+  if(isset($attributes['host_template'])) {
+    $template_id = db_fetch_cell("select id from host_template where name = '".$attributes['host_template']."' LIMIT 1");
+    if(isset($template_id)) {
+      echo "Hosttemplate ".$attributes['host_template']." found with id $template_id\n";
+    }
+    else {
+      echo "Hosttemplate ".$attributes['host_template']." not found\n";
+      return 0;
+    }
+  }
+
+  $host_id = api_device_save(
+    empty($id) ? NULL : $id,
+    empty($template_id) ? 0 : $template_id,
+    $host,
+    empty($attributes['hostname'])            ? NULL : $attributes['hostname'],
+    empty($attributes['snmp_community'])      ? NULL : $attributes['snmp_community'],
+    empty($attributes['snmp_version'])        ? NULL : $attributes['snmp_version'],
+    empty($attributes['snmp_username'])       ? NULL : $attributes['snmp_username'],
+    empty($attributes['snmp_auth_password'])  ? NULL : $attributes['snmp_auth_password'],
+    empty($attributes['snmp_port'])           ? NULL : $attributes['snmp_port'],
+    empty($attributes['snmp_timeout'])        ? NULL : $attributes['snmp_timeout'],
+    empty($attributes['disabled'])            ? NULL : $attributes['disabled'],
+    empty($attributes['availability_method']) ? NULL : $attributes['availability_method'],
+    empty($attributes['ping_method'])         ? NULL : $attributes['ping_method'],
+    empty($attributes['ping_port'])           ? NULL : $attributes['ping_port'],
+    empty($attributes['ping_timeout'])        ? NULL : $attributes['ping_timeout'],
+    empty($attributes['ping_retries'])        ? NULL : $attributes['ping_retries'],
+    empty($attributes['notes'])               ? NULL : $attributes['notes'],
+    empty($attributes['snmp_auth_protocol'])  ? NULL : $attributes['snmp_auth_protocol'],
+    empty($attributes['snmp_priv_password'])  ? NULL : $attributes['snmp_priv_password'],
+    empty($attributes['snmp_priv_protocol'])  ? NULL : $attributes['snmp_priv_protocol'],
+    empty($attributes['snmp_context'])        ? NULL : $attributes['snmp_context'],
+    empty($attributes['snmp_max_oids'])       ? NULL : $attributes['snmp_max_oids'],
+    NULL
+  );
+  if($host_id == 0) {
+    # try to find out what went wrong
+    if (isset($_SESSION['sess_error_fields'])) {
+      foreach($_SESSION['sess_error_fields'] as $key => $field) {
+        if(isset($_SESSION['sess_field_values'][$key])) {
+          $value = $_SESSION['sess_field_values'][$key];
+          echo "api_device_save failed: Passed invalid value as $field: $value\n";
+        }
+        echo "api_device_save failed: Passed invalid value as $field\n";
+      }
+    }
+  }
+  return $host_id;
+}
+
 $parms = $_SERVER["argv"];
 array_shift($parms);
 
@@ -115,13 +181,45 @@ if (sizeof($parms)) {
       $fh = fopen($filename, 'w') or die("Can't open file $filename");
       fwrite($fh, json_encode(instances())) or die("Can't write to file $filename");
       fclose($fh);
-      echo "API: Instances written to $filename\n";
+      echo "Instances written to $filename\n";
     }
     else {
       echo "You have to pass a filename as a second parameter\n";
       echo "Usage: ".__FILE__." instances <filename>\n";
       exit(1);
     }
+    break;
+  case 'save':
+    if(!isset($parms[1]) or !isset($parms[2])) {
+      echo "You must pass the cacti host and a filename with the hostattributes in json format\n";
+      echo "Usage: ".__FILE__." save <hostname> <json_filename>\n";
+      exit(1);
+    }
+
+    $cacti_host = $parms[1];
+    $json = file_get_contents($parms[2]);
+    if($json == FALSE) {
+      echo "Unable to read file ".$parms[2]."\n";
+      exit(1);
+    }
+    $attributes = json_decode($json, true);
+    if (!isset($attributes)) {
+      echo "Unable to decode json\n";
+      exit(1);
+    }
+
+    $hostid = save($cacti_host, $attributes);
+    if ($hostid != 0) {
+      exit(0);
+    }
+    else {
+      echo "Unable to save host $cacti_host\n";
+      exit(1);
+    }
+    break;
+  case 'destroy':
+    echo "Destroy not yet implemented\n";
+    exit(1);
     break;
   default:
     echo "ERROR: Ivalid argument ".$parms[0]."\n";
