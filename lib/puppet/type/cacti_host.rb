@@ -16,53 +16,39 @@ Puppet::Type.newtype(:cacti_host) do
   newproperty(:snmp_version) do
     desc "Supported SNMP version for this host."
 
-    newvalues(1, 2, 3)
-
-    munge do |value|
-      value.to_i
-    end
+    newvalues 1,2,3
   end
 
   newproperty(:snmp_community) do
     desc "SNMP community string for version 1 or 2."
 
     validate do |value|
-      if value != "" and value !~ /^[a-zA-Z0-9\-_]{1,32}$/
+      unless /^[a-zA-Z0-9\-_]{1,32}$/.match(value)
         raise ArgumentError, "%s is not a valid SNMP community string" % value
       end
     end
-
-    defaultto ""
   end
 
   newproperty(:snmp_username) do
     desc "SNMP username for version 3."
-
-    defaultto ""
   end
 
   newproperty(:snmp_auth_password) do
     desc "SNMP authorization password for version 3."
-
-    defaultto ""
   end
 
   newproperty(:snmp_auth_protocol) do
     desc "SNMP authorization protocol for version 3."
 
-    newvalues(:md5, :sha, "")
+    newvalues(:md5, :sha)
 
     munge do |value|
       value.to_s.upcase
     end
-
-    defaultto ""
   end
 
   newproperty(:snmp_priv_password) do
     desc "SNMP privacy password for version 3."
-
-    defaultto ""
   end
 
   newproperty(:snmp_priv_protocol) do
@@ -79,14 +65,10 @@ Puppet::Type.newtype(:cacti_host) do
       end
     end
 
-    # This makes me vomit
-    defaultto "[None]"
   end
 
   newproperty(:snmp_context) do
     desc "SNMP context for version 3."
-
-    defaultto ""
   end
 
   newproperty(:snmp_port) do
@@ -101,8 +83,6 @@ Puppet::Type.newtype(:cacti_host) do
     munge do |value|
       value.to_i
     end
-
-    defaultto "161"
   end
 
   newproperty(:snmp_timeout) do
@@ -117,8 +97,6 @@ Puppet::Type.newtype(:cacti_host) do
     munge do |value|
       value.to_i
     end
-
-    defaultto "500"
   end
 
   newproperty(:snmp_max_oids) do
@@ -133,14 +111,10 @@ Puppet::Type.newtype(:cacti_host) do
     munge do |value|
       value.to_i
     end
-
-    defaultto "10"
   end
 
   newproperty(:host_template) do
     desc "Host template to use for this host."
-
-    defaultto ""
   end
 
   newproperty(:disabled)
@@ -162,93 +136,66 @@ Puppet::Type.newtype(:cacti_host) do
 
   newproperty(:notes) do
     desc "Notes for this host."
-
-    defaultto ""
   end
 
-  # FIXME these are just the values that match what is created by default
-
-  # Hardcoded to SNMP
   newproperty(:availability_method) do
     desc "The method Cacti will use to determine if a host is available for polling."
 
-    newvalue(2)
-
-    munge do |value|
-      value.to_i
+    validate do |value|
+      raise Puppet::Error, "availability_method has to be numeric, not #{value}" unless value.to_s =~ /^[0-9]+$/
     end
-
-    defaultto "2"
   end
 
-  # Hardcoded to UDP
   newproperty(:ping_method) do
     desc "The type of ping packet to send."
 
-    newvalue(2)
-
-    munge do |value|
-      value.to_i
+    validate do |value|
+      raise Puppet::Error, "ping_method has to be numeric, not #{value}" unless value.to_s =~ /^[0-9]+$/
     end
-
-    defaultto "2"
   end
 
-  # Hardcoded (UDP) port 23
   newproperty(:ping_port) do
     desc "TCP or UDP port to attempt connection."
 
-    newvalue(23)
-
-    munge do |value|
-      value.to_i
+    validate do |value|
+      raise Puppet::Error, "ping_port has to be numeric, not #{value}" unless value.to_s =~ /^[0-9]+$/
     end
 
-    defaultto "23"
   end
 
   # Hardcoded to 400 milliseconds timeout
   newproperty(:ping_timeout) do
     desc "The timeout value to use for host ICMP and UDP ping."
 
-    newvalue(400)
-
-    munge do |value|
-      value.to_i
+    validate do |value|
+      raise Puppet::Error, "ping_timeout has to be numeric, not #{value}" unless value.to_s =~ /^[0-9]+$/
     end
 
-    defaultto "400"
   end
 
   # Hardcoded to 1 retry attempt
   newproperty(:ping_retries) do
     desc "After an initial failure, the number of ping retries Cacti will attempt."
 
-    newvalue(1)
-
-    munge do |value|
-      value.to_i
+    validate do |value|
+      raise Puppet::Error, "ping_retries has to be numeric, not #{value}" unless value.to_s =~ /^[0-9]+$/
     end
-
-    defaultto "1"
   end
-
-  # FIXME If I create a cacti_host_template type, enable autorequire magic
-  #autorequire(:cacti_host_template) do
-  #  @resource[:host_template]
-  #end
 
   validate do
     case self[:snmp_version]
-    when 3 then
-      self.fail "SNMP username is required" unless self[:snmp_username] != ""
-      self.fail "SNMP authorization protocol is required" unless self[:snmp_auth_protocol] != ""
-      self.fail "SNMP authorization password is required" unless self[:snmp_auth_password] != ""
+    when :'3' then
+      raise Puppet::Error, "snmp_username is required for SNMPv3" unless self[:snmp_username]
+      raise Puppet::Error, "snmp_auth_protocol protocol is required for SNMPv3" unless self[:snmp_auth_protocol]
+      raise Puppet::Error, "snmp_auth_password is required for SNMPv3" unless self[:snmp_auth_password]
+      raise Puppet::Error, "snmp_priv_protocol is required for SNMPv3" unless self[:snmp_priv_protocol]
       if self[:snmp_priv_protocol] != "[None]" then
-        self.fail "SNMP privacy password is required" unless self[:snmp_priv_password] != ""
+        raise Puppet::Error, "snmp_priv_password is required when using SNMPv3" unless self[:snmp_priv_password]
       end
-    when 1, 2 then
-      self.fail "SNMP community is required" unless self[:snmp_community] != ""
+    when :'2'
+      raise Puppet::Error, "snmp_community is required for SNMPv2" unless self[:snmp_community]
+    when :'1'
+      raise Puppet::Error, "snmp_community is required for SNMPv1" unless self[:snmp_community]
     end
   end
 end

@@ -117,42 +117,49 @@ function save($host, $attributes) {
     echo "Host $host is currently present and will be updated (id=$id)\n";
   }
 
-  # The hosttemplate is passed by puppet as a string but we need the corresponding id
-  $template_id;
+  $hostTemplateId;
   if(isset($attributes['host_template'])) {
-    $template_id = db_fetch_cell("select id from host_template where name = '".$attributes['host_template']."' LIMIT 1");
-    if(isset($template_id)) {
-      echo "Hosttemplate ".$attributes['host_template']." found with id $template_id\n";
+    foreach(getHostTemplates() as  $templateid => $name) {
+      if ($name == $attributes['host_template']) {
+        $hostTemplateId = $templateid;
+      }
     }
-    else {
-      echo "Hosttemplate ".$attributes['host_template']." not found\n";
-      return 0;
+    if(isset($hostTemplateId)) {
+      echo "Hosttemplate ".$attributes['host_template']." found with id $hostTemplateId\n";
     }
+    else{
+      echo "Hosttemplate ".$attributes['host_template']." was not found. The API may reset the hosttemplate for host $host\n";
+    }
+  }
+
+  $default_community = NULL;
+  if (empty($attributes['version']) or $attributes['version'] == '1' or $attributes['version'] == '2') {
+    $default_community = 'public';
   }
 
   $host_id = api_device_save(
     empty($id) ? NULL : $id,
-    empty($template_id) ? 0 : $template_id,
+    empty($hostTemplateId) ? 0 : $hostTemplateId,
     $host,
-    empty($attributes['hostname'])            ? NULL : $attributes['hostname'],
-    empty($attributes['snmp_community'])      ? NULL : $attributes['snmp_community'],
-    empty($attributes['snmp_version'])        ? NULL : $attributes['snmp_version'],
-    empty($attributes['snmp_username'])       ? NULL : $attributes['snmp_username'],
-    empty($attributes['snmp_auth_password'])  ? NULL : $attributes['snmp_auth_password'],
-    empty($attributes['snmp_port'])           ? NULL : $attributes['snmp_port'],
-    empty($attributes['snmp_timeout'])        ? NULL : $attributes['snmp_timeout'],
-    empty($attributes['disabled'])            ? NULL : $attributes['disabled'],
-    empty($attributes['availability_method']) ? NULL : $attributes['availability_method'],
-    empty($attributes['ping_method'])         ? NULL : $attributes['ping_method'],
-    empty($attributes['ping_port'])           ? NULL : $attributes['ping_port'],
-    empty($attributes['ping_timeout'])        ? NULL : $attributes['ping_timeout'],
-    empty($attributes['ping_retries'])        ? NULL : $attributes['ping_retries'],
-    empty($attributes['notes'])               ? NULL : $attributes['notes'],
-    empty($attributes['snmp_auth_protocol'])  ? NULL : $attributes['snmp_auth_protocol'],
-    empty($attributes['snmp_priv_password'])  ? NULL : $attributes['snmp_priv_password'],
-    empty($attributes['snmp_priv_protocol'])  ? NULL : $attributes['snmp_priv_protocol'],
-    empty($attributes['snmp_context'])        ? NULL : $attributes['snmp_context'],
-    empty($attributes['snmp_max_oids'])       ? NULL : $attributes['snmp_max_oids'],
+    empty($attributes['hostname'])            ? NULL     : $attributes['hostname'],
+    empty($attributes['snmp_community'])      ? $default_community : $attributes['snmp_community'],
+    empty($attributes['snmp_version'])        ? '1'      : $attributes['snmp_version'],
+    empty($attributes['snmp_username'])       ? NULL     : $attributes['snmp_username'],
+    empty($attributes['snmp_auth_password'])  ? NULL     : $attributes['snmp_auth_password'],
+    empty($attributes['snmp_port'])           ? '161'    : $attributes['snmp_port'],
+    empty($attributes['snmp_timeout'])        ? '500'    : $attributes['snmp_timeout'],
+    empty($attributes['disabled'])            ? NULL     : $attributes['disabled'],
+    empty($attributes['availability_method']) ? '2'      : $attributes['availability_method'],
+    empty($attributes['ping_method'])         ? '2'      : $attributes['ping_method'],
+    empty($attributes['ping_port'])           ? NULL     : $attributes['ping_port'],
+    empty($attributes['ping_timeout'])        ? '400'    : $attributes['ping_timeout'],
+    empty($attributes['ping_retries'])        ? NULL     : $attributes['ping_retries'],
+    empty($attributes['notes'])               ? NULL     : $attributes['notes'],
+    empty($attributes['snmp_auth_protocol'])  ? NULL     : $attributes['snmp_auth_protocol'],
+    empty($attributes['snmp_priv_password'])  ? NULL     : $attributes['snmp_priv_password'],
+    empty($attributes['snmp_priv_protocol'])  ? NULL     : $attributes['snmp_priv_protocol'],
+    empty($attributes['snmp_context'])        ? NULL     : $attributes['snmp_context'],
+    empty($attributes['snmp_max_oids'])       ? '10'     : $attributes['snmp_max_oids'],
     NULL
   );
   if($host_id == 0) {

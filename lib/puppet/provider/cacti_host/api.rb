@@ -50,6 +50,8 @@ Puppet::Type.type(:cacti_host).provide(:api) do
   end
 
   def create
+    raise Puppet::Error, "Cannot create a cacti_host with no hostname beeing set" unless @resource[:hostname]
+
     # Take all the property values from the resource and
     # store them in property_hash so the flush method can
     # see them
