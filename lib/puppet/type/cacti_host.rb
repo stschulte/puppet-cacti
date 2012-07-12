@@ -54,11 +54,10 @@ Puppet::Type.newtype(:cacti_host) do
   newproperty(:snmp_priv_protocol) do
     desc "SNMP privacy protocol for version 3."
 
-    newvalues(:des, :aes, :'[None]')
+    newvalues(:des, :aes, :aes128, :'[None]')
 
     munge do |value|
-      # Getting fed up of this symbol/string malarkey
-      if [:des, :aes, 'des', 'aes'].include?(value) then
+      unless value.to_s == '[None]'
         value.to_s.upcase
       else
         value.to_s
