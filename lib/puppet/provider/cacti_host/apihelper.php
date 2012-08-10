@@ -314,6 +314,8 @@ if (sizeof($parms)) {
 }
 else {
   echo "Usage: apihelper.php instances\n";
+  echo "Usage: apihelper.php instances <filename>\n";
+  echo "Usage: apihelper.php save <hostname> <json_filename>\n";
 }
 
 ?>
