@@ -107,13 +107,13 @@ function instances(){
 
 function save($host, $attributes) {
   # We first need the id of our host if the host is already present.
-  # Unfortunately the API does not have a nice function for that already
-  # so we cheat a little bit here
-  $id = db_fetch_cell("select id from host where description = '$host' LIMIT 1");
-  if (empty($id)) {
+  $id;
+  $hostids = getHostsByDescription();
+  if (empty($hostids[$host])) {
     echo "Host $host is currently absent\n";
   }
   else {
+    $id = $hostids[$host];
     echo "Host $host is currently present and will be updated (id=$id)\n";
   }
 
