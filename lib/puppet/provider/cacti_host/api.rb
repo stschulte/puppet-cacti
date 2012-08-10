@@ -23,9 +23,12 @@ Puppet::Type.type(:cacti_host).provide(:api) do
     begin
       apihelper :instances, output.path
       hosts = PSON.parse(output.read)
+    rescue PSON::ParserError => detail
+      raise Puppet::Error, "Unable to get cacti hosts in json format. Please check that cacti and mysqld are running and that you have modified #{self::APIHELPER} to match your installation: #{detail}"
     ensure
       output.close!
     end
+
 
     hosts.each_pair do |description, hash|
       resource = {:name => description, :ensure => :present}
