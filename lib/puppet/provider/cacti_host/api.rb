@@ -10,7 +10,6 @@ Puppet::Type.type(:cacti_host).provide(:api) do
 
   self::APIHELPER = File.join(File.dirname(__FILE__), 'apihelper.php')
 
-  confine :exists => '/usr/bin/php'
   commands :apihelper => self::APIHELPER
 
   mk_resource_methods
