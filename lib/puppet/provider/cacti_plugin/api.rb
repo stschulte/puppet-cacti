@@ -48,7 +48,7 @@ Puppet::Type.type(:cacti_plugin).provide(:api) do
     action = case desired_state
     when :enabled
       :enable
-    when :disable
+    when :disabled
       :disable
     when :uninstalled
       :uninstall
