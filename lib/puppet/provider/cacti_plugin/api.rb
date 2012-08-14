@@ -54,6 +54,7 @@ Puppet::Type.type(:cacti_plugin).provide(:api) do
       :uninstall
     end
     apihelper action, resource[:name]
+    @property_hash[:ensure] = desired_state
   end
 
 end

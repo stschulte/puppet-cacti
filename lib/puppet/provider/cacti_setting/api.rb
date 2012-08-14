@@ -46,6 +46,7 @@ Puppet::Type.type(:cacti_setting).provide(:api) do
 
   def value=(new_value)
     apihelper :set, resource[:name], new_value
+    @property_hash[:value] = new_value
   end
 
 end
